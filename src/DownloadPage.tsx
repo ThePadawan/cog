@@ -14,6 +14,7 @@ const DownloadPage = (p: DownloadPageProps) => {
   const params = getParamsFromQuery(q);
 
   const [fallback, setFallback] = useState<Blob | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     combine(params).then(
@@ -22,8 +23,7 @@ const DownloadPage = (p: DownloadPageProps) => {
         setFallback(success as Blob);
       },
       (failure) => {
-        // TODO: React to img 404, 500 etc. appropriately.
-        console.log(failure);
+        setError(failure);
       }
     );
   }, []);
@@ -36,6 +36,7 @@ const DownloadPage = (p: DownloadPageProps) => {
           Didn't work? Try this direct link instead.
         </a>
       )}
+      {error !== null && <p>Could not access image: {`${error}`}</p>}
       <a href="/">What is this?</a>
     </>
   );

@@ -38,7 +38,7 @@ export const combine = (p: CombinationParameters): Promise<Blob | string> => {
       };
 
       imageElement.onerror = () => {
-        reject(imageElement);
+        reject(p);
       };
 
       if (typeof p === "string") {
@@ -75,7 +75,9 @@ export const combine = (p: CombinationParameters): Promise<Blob | string> => {
           });
         });
       },
-      (anyImageErrored) => anyImageErrored
+      (erroredEntry) => {
+        return Promise.reject(erroredEntry);
+      }
     )
     .finally(() => {
       document.body.removeChild(c);
