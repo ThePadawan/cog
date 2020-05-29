@@ -6,6 +6,8 @@ import {
   faPlusCircle,
   faFileUpload,
 } from "@fortawesome/free-solid-svg-icons";
+import { faGithub } from "@fortawesome/free-brands-svg-icons";
+
 import { combine } from "./combine";
 import { getCombinerKind } from "./params";
 
@@ -122,8 +124,11 @@ const ReadmePage = () => {
       linkAttributes.href = q;
     } else {
       linkAttributes.href = "#";
-      linkAttributes.onClick = () =>
+      linkAttributes.onClick = (ev: any) => {
+        // Don't actually pollute the URL with "#".
+        ev.preventDefault();
         download({ combinationType, sortedEntries });
+      };
     }
   }
 
@@ -205,6 +210,11 @@ const ReadmePage = () => {
         <label className="cog-settings__label" htmlFor="combination-vertical">
           Vertical
         </label>
+      </div>
+      <div className="cog-extras">
+        <a href="//github.com/ThePadawan/cog" className="cog-extras__link">
+          <FontAwesomeIcon icon={faGithub} />
+        </a>
       </div>
     </>
   );

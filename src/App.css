@@ -34,3 +34,11 @@
 .cog-settings__label {
   margin-right: 0.5rem;
 }
+
+.cog-extras {
+  margin-top: 2rem;
+}
+
+.cog-extras__link {
+  color: #000;
+}
