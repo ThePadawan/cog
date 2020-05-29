@@ -6,6 +6,7 @@ COG does this for you right here in your browser.
 # How to build and install
 
 > npm install
+
 > npm run build
 
 Then simply serve the "build" folder on your static server.
