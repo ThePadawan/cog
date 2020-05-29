@@ -45,7 +45,7 @@ const ReadmePage = () => {
   });
 
   const indices = Object.keys(entries);
-  const sortedEntries = indices.sort().map((k) => entries[k]);
+  const sortedEntries = indices.sort((a, b) => +a - +b).map((k) => entries[k]);
 
   const addUrl = () => {
     // -1 (to get last index) +1 to increment index equal out to 0
