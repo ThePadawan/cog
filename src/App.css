@@ -8,21 +8,21 @@
   font-size: 75%;
 }
 
-.cog-urls__container {
+.cog-entries__container {
   display: flex;
   flex-direction: column;
   align-items: left;
 }
 
-.cog-urls__remove-button {
+.cog-entries__remove-button {
   margin-left: 0.5rem;
 }
 
-.cog-urls__add-button {
+.cog-entries__add-button {
   margin-left: 0.5rem;
 }
 
-.cog-urls__url {
+.cog-entries__entry {
   margin-top: 0.5rem;
   min-width: 32rem;
 }

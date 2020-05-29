@@ -6,7 +6,7 @@ interface CombinerKindLookup {
   v: CombinerKind;
 }
 
-const getCombinerKind = (q: ParsedQs): CombinerKind => {
+const tryGetCombinerKind = (q: ParsedQs): CombinerKind => {
   const defaultCombinerKind = "Horizontal";
 
   if (q.t !== "h" && q.t !== "v") {
@@ -18,6 +18,18 @@ const getCombinerKind = (q: ParsedQs): CombinerKind => {
     v: "Vertical",
   };
   return combinerKindLookup[q.t];
+};
+
+export const getCombinerKind = (s: string): CombinerKind | null => {
+  if (s !== "h" && s !== "v") {
+    return null;
+  }
+
+  const combinerKindLookup: CombinerKindLookup = {
+    h: "Horizontal",
+    v: "Vertical",
+  };
+  return combinerKindLookup[s];
 };
 
 const getImagePaths = (q: ParsedQs): string[] => {
@@ -40,12 +52,12 @@ const getImagePaths = (q: ParsedQs): string[] => {
 
 export interface CombinationParameters {
   combinerKind: CombinerKind;
-  imagePaths: string[];
+  imagePaths: Array<string | File>;
 }
 
-export const getParams = (q: ParsedQs): CombinationParameters => {
+export const getParamsFromQuery = (q: ParsedQs): CombinationParameters => {
   return {
-    combinerKind: getCombinerKind(q),
+    combinerKind: tryGetCombinerKind(q),
     imagePaths: getImagePaths(q),
   };
 };

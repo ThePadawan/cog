@@ -1,107 +1,179 @@
 import React, { useState, ChangeEvent } from "react";
 import qs from "qs";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMinusCircle, faPlusCircle } from "@fortawesome/free-solid-svg-icons";
+import {
+  faMinusCircle,
+  faPlusCircle,
+  faFileUpload,
+} from "@fortawesome/free-solid-svg-icons";
+import { combine } from "./combine";
+import { getCombinerKind } from "./params";
 
-// TODO Also allow local images?
+type Entry = string | File | null;
 
-interface UrlCollection {
-  [key: string]: string;
+interface EntryCollection {
+  [key: string]: Entry;
 }
 
-const validate = (urls: UrlCollection): boolean => {
+const validate = (urls: EntryCollection): boolean => {
   const urlValues = Object.values(urls);
 
-  const isNoUrlEmpty = urlValues.reduce((acc: boolean, u: string) => {
-    const currentUrlValid = u.length > 0;
-    return acc && currentUrlValid;
+  const isNoEntryEmpty = urlValues.reduce((acc: boolean, u: Entry) => {
+    if (typeof u === "string") {
+      const currentUrlValid = u.length > 0;
+      return acc && currentUrlValid;
+    }
+
+    if (u === null) {
+      return false;
+    }
+
+    return acc && u.size > 0;
   }, true);
 
   const hasEnoughUrls = urlValues.length > 1;
 
-  return hasEnoughUrls && isNoUrlEmpty;
+  return hasEnoughUrls && isNoEntryEmpty;
 };
 
 const ReadmePage = () => {
-  const [urlObj, setUrlObj] = useState<UrlCollection>({
+  const [entries, setEntries] = useState<EntryCollection>({
     0: "https://placekitten.com/200/300",
     1: "https://placekitten.com/400/300",
   });
 
-  const indices = Object.keys(urlObj);
-  const sortedUrls = indices.sort().map((k) => urlObj[k]);
+  const indices = Object.keys(entries);
+  const sortedEntries = indices.sort().map((k) => entries[k]);
 
   const addUrl = () => {
     // -1 (to get last index) +1 to increment index equal out to 0
     const newIndex = indices.length;
 
-    const newUrlObj = { ...urlObj };
-    newUrlObj[newIndex] = "";
-    setUrlObj(newUrlObj);
+    const newEntries = { ...entries };
+    newEntries[newIndex] = "";
+    setEntries(newEntries);
+  };
+
+  const addFile = () => {
+    const newIndex = indices.length;
+
+    const newEntries = { ...entries };
+    newEntries[newIndex] = null;
+    setEntries(newEntries);
   };
 
   const removeUrl = (idx: number) => {
-    const newUrlObj: UrlCollection = {};
+    const newEntries: EntryCollection = {};
     let newIndex = 0;
     for (let oldIndex = 0; oldIndex < indices.length; oldIndex++) {
       if (oldIndex === idx) continue;
 
-      newUrlObj[newIndex] = urlObj[oldIndex];
+      newEntries[newIndex] = entries[oldIndex];
       newIndex++;
     }
 
-    setUrlObj(newUrlObj);
+    setEntries(newEntries);
+  };
+
+  const onFileChange = (idx: number, e: ChangeEvent<HTMLInputElement>) => {
+    if (e.currentTarget.files === null) return;
+    const file = e.currentTarget.files[0];
+    const newEntries = { ...entries };
+    newEntries[idx] = file;
+    setEntries(newEntries);
   };
 
   const onChange = (idx: number, e: ChangeEvent<HTMLInputElement>) => {
-    const newUrlObj = { ...urlObj };
+    const newEntries = { ...entries };
     const editedUrl = e.currentTarget.value;
-    newUrlObj[idx] = editedUrl;
-    setUrlObj(newUrlObj);
+    newEntries[idx] = editedUrl;
+    setEntries(newEntries);
   };
 
   const [combinationType, setCombinationType] = useState<string>("h");
 
-  const q = qs.stringify(
-    { t: combinationType, i: sortedUrls },
-    { addQueryPrefix: true }
-  );
+  const download = (x: any) => {
+    const validEntries: Array<string | File> = [];
+    sortedEntries.forEach((e) => {
+      if (e !== null) validEntries.push(e);
+    });
+
+    combine({
+      imagePaths: validEntries,
+      combinerKind: getCombinerKind(x.combinationType)!,
+    }).then((success: Blob | string) => {
+      saveAs(success, "combined.png");
+    });
+    // TODO Error handling
+  };
 
   // Prohibit submitting empty URLs.
   const linkAttributes: any = {};
-  if (validate(urlObj)) linkAttributes.href = q;
+  if (validate(entries)) {
+    const areAllEntriesUrls = sortedEntries.reduce((acc, e) => {
+      return acc && typeof e === "string";
+    }, true);
+
+    if (areAllEntriesUrls) {
+      const q = qs.stringify(
+        { t: combinationType, i: sortedEntries },
+        { addQueryPrefix: true }
+      );
+      linkAttributes.href = q;
+    } else {
+      linkAttributes.href = "#";
+      linkAttributes.onClick = () =>
+        download({ combinationType, sortedEntries });
+    }
+  }
 
   return (
     <>
       <p>
-        Enter some image URLs here and how you want to combine them. Then just
-        press <a {...linkAttributes}>Go!</a>
+        Enter some image URLs and/or select some files here and how you want to
+        combine them. Then just press <a {...linkAttributes}>Go!</a>
       </p>
       <p className="cog-disclaimer">
         No resizing of images is done. Works best with similarly-sized images.
         Images are loaded anonymously client-side.
       </p>
-      <div className="cog-urls__container">
-        {sortedUrls.map((k: string, idx: number) => {
+      <div className="cog-entries__container">
+        {sortedEntries.map((k: Entry, idx: number) => {
           return (
-            <div>
-              <input
-                className="cog-urls__url"
-                type="text"
-                key={`url-${idx}`}
-                value={k}
-                onChange={(e) => onChange(idx, e)}
-              />
-              <FontAwesomeIcon
-                className="cog-urls__remove-button"
-                icon={faMinusCircle}
-                onClick={(_) => removeUrl(idx)}
-              />
-              {idx === sortedUrls.length - 1 ? (
+            <div key={`entry${idx}`}>
+              {typeof k === "string" ? (
+                <input
+                  className="cog-entries__entry"
+                  type="text"
+                  value={k}
+                  onChange={(e) => onChange(idx, e)}
+                />
+              ) : (
+                <input
+                  className="cog-entries__entry"
+                  type="file"
+                  onChange={(e) => onFileChange(idx, e)}
+                />
+              )}
+              {sortedEntries.length > 1 && (
                 <FontAwesomeIcon
-                  className="cog-urls__add-button"
+                  className="cog-entries__remove-button"
+                  icon={faMinusCircle}
+                  onClick={(_) => removeUrl(idx)}
+                />
+              )}
+              {idx === sortedEntries.length - 1 ? (
+                <FontAwesomeIcon
+                  className="cog-entries__add-button"
                   icon={faPlusCircle}
                   onClick={(_) => addUrl()}
+                />
+              ) : undefined}
+              {idx === sortedEntries.length - 1 ? (
+                <FontAwesomeIcon
+                  className="cog-entries__add-button"
+                  icon={faFileUpload}
+                  onClick={(_) => addFile()}
                 />
               ) : undefined}
             </div>
