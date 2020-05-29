@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import qs from "qs";
 import { Location } from "history";
 import { saveAs } from "file-saver";
@@ -37,7 +37,7 @@ const combine = (p: CombinationParameters): Promise<Blob | string> => {
     // It is necessary to restrict CORS request here. Otherwise, we might leak credentials etc.
     // so browsers rightly disallow exporting canvases that could leak information retrieved
     // in such a manner.
-    imageElement.crossOrigin = "anonymous"; // TODO: Document this
+    imageElement.crossOrigin = "anonymous";
     return new Promise<HTMLImageElement>((resolve, reject) => {
       imageElement.onload = () => {
         resolve(imageElement);
@@ -94,21 +94,31 @@ const DownloadPage = (p: DownloadPageProps) => {
   const q = qs.parse(p.location.search, { ignoreQueryPrefix: true });
   const params = getParams(q);
 
-  combine(params).then(
-    (success) => {
-      saveAs(success, "combined.png");
-    },
-    (failure) => {
-      // TODO: React to img 404, 500 etc. appropriately.
-      console.log(failure);
-    }
-  );
+  const [fallback, setFallback] = useState<Blob | null>(null);
+
+  useEffect(() => {
+    combine(params).then(
+      (success) => {
+        saveAs(success, "combined.png");
+        setFallback(success as Blob);
+      },
+      (failure) => {
+        // TODO: React to img 404, 500 etc. appropriately.
+        console.log(failure);
+      }
+    );
+  }, []);
 
   return (
-    <div>
+    <>
       <div>Download started...</div>
+      {fallback !== null && (
+        <a download="combined.png" href={URL.createObjectURL(fallback)}>
+          Didn't work? Try this direct link instead.
+        </a>
+      )}
       <a href="/">What is this?</a>
-    </div>
+    </>
   );
 };
 

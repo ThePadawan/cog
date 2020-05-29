@@ -1,18 +1,18 @@
 import React from "react";
 import { createBrowserHistory } from "history";
-
-// TODO Clean up CSS
+import { Router } from "react-router";
 import "./App.css";
 
-import { Router } from "react-router";
 import AppInner from "./AppInner";
 
 function App() {
   const history = createBrowserHistory();
   return (
-    <Router history={history}>
-      <AppInner />
-    </Router>
+    <div className="cog">
+      <Router history={history}>
+        <AppInner />
+      </Router>
+    </div>
   );
 }
 
