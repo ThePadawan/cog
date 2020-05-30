@@ -1,15 +1,11 @@
-import React, { useState, ChangeEvent } from "react";
+import React, { useState, useReducer } from "react";
 import qs from "qs";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faMinusCircle,
-  faPlusCircle,
-  faFileUpload,
-} from "@fortawesome/free-solid-svg-icons";
 import { faGithub } from "@fortawesome/free-brands-svg-icons";
 
 import { combine } from "./combine";
 import { getCombinerKind } from "./params";
+import CogInput from "./input";
 
 type Entry = string | File | null;
 
@@ -38,59 +34,51 @@ const validate = (urls: EntryCollection): boolean => {
   return hasEnoughUrls && isNoEntryEmpty;
 };
 
+const reducer = (c: EntryCollection, action: any) => {
+  switch (action.type) {
+    case "changeUrl": {
+      const newEntries = { ...c };
+      newEntries[action.data.idx] = action.data.value;
+      return newEntries;
+    }
+    case "changeFile": {
+      const newEntries = { ...c };
+      const files: FileList | null = action.data.value;
+      if (!files) return c;
+      if (files.length === 0) newEntries[action.data.idx] = null;
+      else newEntries[action.data.idx] = files[0];
+      return newEntries;
+    }
+    case "add": {
+      const newIndex = Object.keys(c).length;
+      const newEntries = { ...c };
+      newEntries[newIndex] = action.data;
+      return newEntries;
+    }
+    case "remove": {
+      const indices = Object.keys(c);
+      const newEntries: EntryCollection = {};
+      let newIndex = 0;
+      for (let oldIndex = 0; oldIndex < indices.length; oldIndex++) {
+        if (oldIndex === action.data.idx) continue;
+
+        newEntries[newIndex] = c[oldIndex];
+        newIndex++;
+      }
+
+      return newEntries;
+    }
+  }
+  return c;
+};
+
 const ReadmePage = () => {
-  const [entries, setEntries] = useState<EntryCollection>({
+  const [entries, dispatch] = useReducer(reducer, {
     0: "https://placekitten.com/200/300",
     1: "https://placekitten.com/400/300",
-  });
+  } as EntryCollection);
 
-  const indices = Object.keys(entries);
-  const sortedEntries = indices.sort((a, b) => +a - +b).map((k) => entries[k]);
-
-  const addUrl = () => {
-    // -1 (to get last index) +1 to increment index equal out to 0
-    const newIndex = indices.length;
-
-    const newEntries = { ...entries };
-    newEntries[newIndex] = "";
-    setEntries(newEntries);
-  };
-
-  const addFile = () => {
-    const newIndex = indices.length;
-
-    const newEntries = { ...entries };
-    newEntries[newIndex] = null;
-    setEntries(newEntries);
-  };
-
-  const removeUrl = (idx: number) => {
-    const newEntries: EntryCollection = {};
-    let newIndex = 0;
-    for (let oldIndex = 0; oldIndex < indices.length; oldIndex++) {
-      if (oldIndex === idx) continue;
-
-      newEntries[newIndex] = entries[oldIndex];
-      newIndex++;
-    }
-
-    setEntries(newEntries);
-  };
-
-  const onFileChange = (idx: number, e: ChangeEvent<HTMLInputElement>) => {
-    if (e.currentTarget.files === null) return;
-    const file = e.currentTarget.files[0];
-    const newEntries = { ...entries };
-    newEntries[idx] = file;
-    setEntries(newEntries);
-  };
-
-  const onChange = (idx: number, e: ChangeEvent<HTMLInputElement>) => {
-    const newEntries = { ...entries };
-    const editedUrl = e.currentTarget.value;
-    newEntries[idx] = editedUrl;
-    setEntries(newEntries);
-  };
+  const sortedEntries = Object.values(entries);
 
   const [combinationType, setCombinationType] = useState<string>("h");
 
@@ -132,6 +120,19 @@ const ReadmePage = () => {
     }
   }
 
+  const inputs = sortedEntries.map((k: Entry, idx: number) => {
+    return (
+      <CogInput
+        key={`cog-input-${idx}`}
+        entry={k}
+        idx={idx}
+        dispatch={dispatch}
+        isOnly={sortedEntries.length === 1}
+        isLast={idx === sortedEntries.length - 1}
+      />
+    );
+  });
+
   return (
     <>
       <p>
@@ -142,49 +143,7 @@ const ReadmePage = () => {
         No resizing of images is done. Works best with similarly-sized images.
         Images are loaded anonymously client-side.
       </p>
-      <div className="cog-entries__container">
-        {sortedEntries.map((k: Entry, idx: number) => {
-          return (
-            <div key={`entry${idx}`}>
-              {typeof k === "string" ? (
-                <input
-                  className="cog-entries__entry"
-                  type="text"
-                  value={k}
-                  onChange={(e) => onChange(idx, e)}
-                />
-              ) : (
-                <input
-                  className="cog-entries__entry"
-                  type="file"
-                  onChange={(e) => onFileChange(idx, e)}
-                />
-              )}
-              {sortedEntries.length > 1 && (
-                <FontAwesomeIcon
-                  className="cog-entries__remove-button"
-                  icon={faMinusCircle}
-                  onClick={(_) => removeUrl(idx)}
-                />
-              )}
-              {idx === sortedEntries.length - 1 ? (
-                <FontAwesomeIcon
-                  className="cog-entries__add-button"
-                  icon={faPlusCircle}
-                  onClick={(_) => addUrl()}
-                />
-              ) : undefined}
-              {idx === sortedEntries.length - 1 ? (
-                <FontAwesomeIcon
-                  className="cog-entries__add-button"
-                  icon={faFileUpload}
-                  onClick={(_) => addFile()}
-                />
-              ) : undefined}
-            </div>
-          );
-        })}
-      </div>
+      <div className="cog-entries__container">{inputs}</div>
       <div className="cog-settings__container">
         <input
           className="cog-settings__radio"
